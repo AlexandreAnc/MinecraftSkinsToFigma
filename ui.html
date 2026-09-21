@@ -1,0 +1,1392 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --bg: var(--figma-color-bg, #fff);
+    --bg2: var(--figma-color-bg-secondary, #f5f5f5);
+    --bg3: var(--figma-color-bg-tertiary, #e6e6e6);
+    --text: var(--figma-color-text, #1e1e1e);
+    --text2: var(--figma-color-text-secondary, #767676);
+    --border: var(--figma-color-border, #e6e6e6);
+    --brand: var(--figma-color-bg-brand, #0d99ff);
+    --on-brand: var(--figma-color-text-onbrand, #fff);
+    --danger: var(--figma-color-text-danger, #f24822);
+  }
+  body {
+    margin: 0; font-family: Inter, "SF Pro Text", -apple-system, sans-serif;
+    font-size: 11px; color: var(--text); background: var(--bg); -webkit-font-smoothing: antialiased;
+  }
+  .wrap { display: flex; flex-direction: column; height: 100vh; }
+  .scroll { flex: 1; overflow-y: auto; padding: 12px; }
+  .label { font-weight: 600; margin-bottom: 6px; display: block; }
+  .hint { color: var(--text2); }
+
+  .tabs { display: flex; gap: 2px; background: var(--bg2); padding: 2px; border-radius: 6px; margin-bottom: 12px; }
+  .tabs button {
+    flex: 1; border: 0; background: transparent; color: var(--text2);
+    padding: 6px; border-radius: 4px; cursor: pointer; font: inherit; font-weight: 500;
+  }
+  .tabs button[aria-selected="true"] { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+  input[type="text"], input[type="number"], select {
+    width: 100%; padding: 7px 8px; border: 1px solid var(--border);
+    border-radius: 5px; background: var(--bg); color: var(--text); font: inherit; outline: none;
+  }
+  input:focus, select:focus { border-color: var(--brand); }
+  input[type="color"] {
+    width: 100%; height: 30px; padding: 2px; border: 1px solid var(--border);
+    border-radius: 5px; background: var(--bg); cursor: pointer;
+  }
+
+  .drop {
+    border: 1px dashed var(--border); border-radius: 6px; padding: 18px 12px;
+    text-align: center; cursor: pointer; color: var(--text2); background: var(--bg2);
+  }
+  .drop.over { border-color: var(--brand); color: var(--text); }
+  .drop strong { color: var(--text); display: block; margin-bottom: 3px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .card {
+    display: flex; gap: 8px; align-items: center; text-align: left;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    border-radius: 6px; padding: 8px; cursor: pointer; font: inherit;
+  }
+  .card:hover:not(:disabled) { border-color: var(--text2); }
+  .card[aria-pressed="true"] { border-color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+  .card:disabled { opacity: .4; cursor: not-allowed; }
+  .card svg { flex: none; }
+  .card .t { font-weight: 600; display: block; }
+  .card .s { color: var(--text2); font-size: 10px; }
+
+  .section { margin-top: 14px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+  .section-head .label { margin-bottom: 0; }
+  .linkish { border: 0; background: none; color: var(--text2); font: inherit; cursor: pointer; padding: 0; text-decoration: underline; }
+  .linkish:hover { color: var(--text); }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; min-width: 0; }
+
+  .preview {
+    margin-top: 12px; height: 200px; border-radius: 6px; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+    user-select: none; touch-action: none;
+    background-color: var(--bg2);
+    background-image:
+      linear-gradient(45deg, var(--bg3) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--bg3) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--bg3) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--bg3) 75%);
+    background-size: 12px 12px; background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+  }
+  .preview.rotatable { cursor: grab; }
+  .preview.dragging { cursor: grabbing; }
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 5px; max-height: 94%; }
+  .stage canvas { max-width: 100%; min-height: 0; object-fit: contain; image-rendering: pixelated; pointer-events: none; }
+  .nametag {
+    line-height: 1.2; white-space: nowrap; pointer-events: none; flex: none;
+  }
+  .preview .msg { color: var(--text2); padding: 0 16px; text-align: center; }
+  .preview .msg.err { color: var(--danger); }
+  .chip {
+    position: absolute; bottom: 6px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 5px; color: var(--text2); font-size: 10px; pointer-events: none;
+  }
+  .chip.right { right: 6px; }
+  .chip.left { left: 6px; }
+  .preview.dragging .chip.left { color: var(--text); border-color: var(--brand); }
+
+  .recents { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .recent {
+    display: flex; gap: 8px; align-items: center; text-align: left; font: inherit;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    border-radius: 6px; padding: 6px; cursor: pointer; overflow: hidden;
+  }
+  .recent:hover { border-color: var(--brand); }
+  .recent .thumb {
+    width: 34px; height: 34px; flex: none; border-radius: 4px; background: var(--bg2);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .recent .thumb img { max-width: 100%; max-height: 100%; image-rendering: pixelated; }
+  .recent .meta { min-width: 0; }
+  .recent .n { font-weight: 600; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .recent .d { color: var(--text2); font-size: 10px; }
+  .empty { color: var(--text2); text-align: center; padding: 28px 12px; }
+
+  .footer { padding: 12px; border-top: 1px solid var(--border); background: var(--bg); }
+  .primary {
+    width: 100%; padding: 9px; border: 0; border-radius: 6px; cursor: pointer;
+    background: var(--brand); color: var(--on-brand); font: inherit; font-weight: 600;
+  }
+  .primary:disabled { opacity: .45; cursor: not-allowed; }
+
+  .checkbox { display: flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+  .checkbox input { margin: 0; accent-color: var(--brand); }
+  .slider { display: flex; align-items: center; gap: 8px; }
+  .slider input { flex: 1; accent-color: var(--brand); }
+  .slider .val { width: 38px; text-align: right; color: var(--text2); font-variant-numeric: tabular-nums; }
+  .about { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--border); color: var(--text2); }
+  .about p { margin: 0 0 5px; }
+  .about .disclaimer { font-size: 9px; line-height: 1.4; opacity: .75; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="scroll">
+    <div class="tabs" role="tablist">
+      <button id="tab-name" role="tab" aria-selected="true" data-i18n="tabName">Username / UUID</button>
+      <button id="tab-file" role="tab" aria-selected="false" data-i18n="tabFile">Skin file</button>
+      <button id="tab-recent" role="tab" aria-selected="false" data-i18n="tabRecent">Recent</button>
+    </div>
+
+    <div id="pane-name">
+      <label class="label" for="player" data-i18n="player">Player</label>
+      <input type="text" id="player" data-i18n-placeholder="playerPlaceholder" placeholder="Leave empty for Steve" autocomplete="off" spellcheck="false" />
+      <div class="hint" style="margin-top:5px" data-i18n="playerHint">Leave empty to preview the default Steve skin.</div>
+    </div>
+
+    <div id="pane-file" class="hidden">
+      <label class="label" data-i18n="skinTexture">Skin texture</label>
+      <div class="drop" id="drop"></div>
+      <input type="file" id="file" accept="image/png" class="hidden" />
+    </div>
+
+    <div id="pane-recent" class="hidden">
+      <div class="section-head">
+        <span class="label" data-i18n="recentTitle">Last 10 imports</span>
+        <button class="linkish hidden" id="clear-recents" data-i18n="clear">Clear</button>
+      </div>
+      <div class="recents" id="recents"></div>
+      <div class="empty hidden" id="recents-empty" data-i18n="recentEmpty">No imports yet.</div>
+    </div>
+
+    <div id="pane-config">
+      <div class="section">
+        <label class="label" data-i18n="renderType">Render type</label>
+        <div class="grid" id="types"></div>
+      </div>
+
+      <div class="section">
+        <label class="label" for="size" data-i18n="size">Size</label>
+        <select id="size"></select>
+      </div>
+
+      <div class="section" id="opt-cape">
+        <label class="label" for="cape" data-i18n="cape">Cape</label>
+        <select id="cape"></select>
+        <div class="hint hidden" id="cape-note" style="margin-top:5px"></div>
+      </div>
+
+      <div class="section" id="opt-yaw">
+        <label class="label" for="yaw" data-i18n="rotation">Rotation</label>
+        <div class="slider">
+          <input type="range" id="yaw" min="-180" max="165" step="15" value="-30" />
+          <span class="val" id="yaw-val">-30&deg;</span>
+        </div>
+        <label class="label" for="pitch" style="margin-top:10px" data-i18n="tilt">Tilt</label>
+        <div class="slider">
+          <input type="range" id="pitch" min="-30" max="30" step="5" value="10" />
+          <span class="val" id="pitch-val">10&deg;</span>
+        </div>
+      </div>
+
+      <div class="section" id="opt-overlay">
+        <label class="checkbox"><input type="checkbox" id="overlay" checked /> <span data-i18n="overlay">Include the outer layer (hat, jacket)</span></label>
+      </div>
+
+      <div class="section">
+        <label class="checkbox"><input type="checkbox" id="nametag" /> <span data-i18n="nametagAdd">Add a nametag above</span></label>
+        <div id="nametag-opts" class="hidden">
+          <div class="section">
+            <label class="label" for="nametag-text" data-i18n="text">Text</label>
+            <input type="text" id="nametag-text" data-i18n-placeholder="nametagPlaceholder" placeholder="Player name" autocomplete="off" />
+          </div>
+          <div class="section row">
+            <div>
+              <label class="label" for="nametag-size" data-i18n="textSize">Text size</label>
+              <input type="number" id="nametag-size" min="4" max="400" step="1" value="32" />
+            </div>
+            <div>
+              <label class="label" for="nametag-opacity" data-i18n="bgOpacity">Background opacity</label>
+              <input type="number" id="nametag-opacity" min="0" max="100" step="5" value="25" />
+            </div>
+          </div>
+          <div class="section row">
+            <div>
+              <label class="label" for="nametag-fg" data-i18n="textColor">Text color</label>
+              <input type="color" id="nametag-fg" value="#ffffff" />
+            </div>
+            <div>
+              <label class="label" for="nametag-bg" data-i18n="bgColor">Background color</label>
+              <input type="color" id="nametag-bg" value="#000000" />
+            </div>
+          </div>
+          <div class="hint" data-i18n="nametagHint">The nametag and the image share one frame, as two separate editable layers. Pick the typeface afterwards in Figma, on the text layer.</div>
+        </div>
+      </div>
+
+      <div class="preview" id="preview">
+        <div class="stage" id="stage">
+          <div class="nametag hidden" id="nametag-preview"></div>
+          <canvas id="preview-canvas" class="hidden"></canvas>
+        </div>
+        <div class="msg hidden" id="preview-msg"></div>
+        <span class="chip right hidden" id="preview-size"></span>
+        <span class="chip left hidden" id="preview-hint" data-i18n="dragHint">Drag to rotate</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <label class="label" for="lang" data-i18n="language">Language</label>
+      <select id="lang">
+        <option value="auto" data-i18n="langAuto">Automatic</option>
+        <option value="en">English</option>
+        <option value="fr">Fran&ccedil;ais</option>
+      </select>
+    </div>
+
+    <div class="about">
+      <p data-i18n="credits">Skins: mc-heads.net, minotar.net &middot; Capes: capes.dev</p>
+      <p class="disclaimer">NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.</p>
+    </div>
+  </div>
+
+  <div class="footer" id="footer">
+    <button class="primary" id="import" data-i18n="importBtn">Import into Figma</button>
+  </div>
+</div>
+
+<script>
+// Textures are served by Mojang's own CDN (which sends CORS headers). The
+// plugin ships no game files of its own, it points at the official source.
+const TEXTURE_CDN = 'https://textures.minecraft.net/texture/';
+const STEVE_TEXTURE = TEXTURE_CDN + '1a4af718455d4aab528e7a61f86fa25e6a369d1768dcb13f7df319a713eb810b';
+const STEVE_FALLBACK = 'https://mc-heads.net/skin/MHF_Steve';
+
+const MINECON_CAPES = [
+  { id: 'mc2011', label: 'MineCon 2011', hash: '953cac8b779fe41383e675ee2b86071a71658f2180f56fbce8aa315ea70e2ed6' },
+  { id: 'mc2012', label: 'MineCon 2012', hash: 'a2e8d97ec79100e90a75d369d1b3ba81273c4f82bc1b737e934eed4a854be1b6' },
+  { id: 'mc2013', label: 'MineCon 2013', hash: '153b1a0dfcbae953cdeb6f2c2bf6bf79943239b1372780da44bcbb29273131da' },
+  { id: 'mc2015', label: 'MineCon 2015', hash: 'b0cc08840700447322d953a02b965f1d65a13a603bf64b17c803c21446fe1635' },
+  { id: 'mc2016', label: 'MineCon 2016', hash: 'e7dfea16dc83c97df01a12fabbd1216359c0cd0ea42f9999b6e97c584963e980' }
+];
+
+/* ---------- Texture and 2D renders (nearest neighbour) ---------- */
+
+function newCanvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  return { c, ctx };
+}
+
+async function loadSkin(blob) {
+  const bitmap = await createImageBitmap(blob);
+  const legacy = bitmap.height === 32;
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = legacy ? 32 : 64;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height, 0, 0, canvas.width, canvas.height);
+  bitmap.close && bitmap.close();
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const alphaAt = (x, y) => pixels[(y * canvas.width + x) * 4 + 3];
+  const slim = !legacy && [[50, 16], [54, 20], [42, 48], [46, 52]].every(([x, y]) => alphaAt(x, y) === 0);
+
+  // Plenty of old 64x32 skins (Notch's, for one) have no alpha channel at all:
+  // their hat layer is an opaque block that would hide the face completely. We
+  // drop it only when both clues agree, namely the always-unused (0,0) corner
+  // is opaque AND the hat holds no transparent pixel. 64x64 skins are left
+  // alone, since some stash data in unused areas yet have a real hat layer.
+  let hatTransparent = false;
+  for (let y = 8; y < 16 && !hatTransparent; y++) {
+    for (let x = 40; x < 48; x++) {
+      if (alphaAt(x, y) === 0) { hatTransparent = true; break; }
+    }
+  }
+  const overlayUsable = !(legacy && alphaAt(0, 0) !== 0 && !hatTransparent);
+
+  return { canvas, legacy, slim, overlayUsable };
+}
+
+// part = [sx, sy, sw, sh, dx, dy, mirror]
+function blit(ctx, src, part, scale) {
+  const [sx, sy, sw, sh, dx, dy, mirror] = part;
+  if (mirror) {
+    ctx.save();
+    ctx.translate((dx + sw) * scale, dy * scale);
+    ctx.scale(-1, 1);
+    ctx.drawImage(src, sx, sy, sw, sh, 0, 0, sw * scale, sh * scale);
+    ctx.restore();
+  } else {
+    ctx.drawImage(src, sx, sy, sw, sh, dx * scale, dy * scale, sw * scale, sh * scale);
+  }
+}
+
+function renderFace(skin, scale, overlay) {
+  const { c, ctx } = newCanvas(8 * scale, 8 * scale);
+  blit(ctx, skin.canvas, [8, 8, 8, 8, 0, 0, false], scale);
+  if (overlay) blit(ctx, skin.canvas, [40, 8, 8, 8, 0, 0, false], scale);
+  return c;
+}
+
+function renderFront(skin, scale, overlay) {
+  const { c, ctx } = newCanvas(16 * scale, 32 * scale);
+  const aw = skin.slim ? 3 : 4;          // arm width
+  const ax = skin.slim ? 1 : 0;          // left margin on screen
+  const arx = 12;                        // arm on the right of the screen
+
+  const base = [
+    [8, 8, 8, 8, 4, 0, false],                     // head
+    [20, 20, 8, 12, 4, 8, false],                  // torso
+    [44, 20, aw, 12, ax, 8, false],                // player's right arm
+    [4, 20, 4, 12, 4, 20, false]                   // player's right leg
+  ];
+  if (skin.legacy) {
+    base.push([44, 20, aw, 12, arx, 8, true]);     // left arm, mirrored
+    base.push([4, 20, 4, 12, 8, 20, true]);        // left leg, mirrored
+  } else {
+    base.push([36, 52, aw, 12, arx, 8, false]);
+    base.push([20, 52, 4, 12, 8, 20, false]);
+  }
+  base.forEach(p => blit(ctx, skin.canvas, p, scale));
+
+  if (overlay) {
+    const over = [[40, 8, 8, 8, 4, 0, false]];     // hat (always present)
+    if (!skin.legacy) {
+      over.push(
+        [20, 36, 8, 12, 4, 8, false],              // jacket
+        [44, 36, aw, 12, ax, 8, false],            // right sleeve
+        [52, 52, aw, 12, arx, 8, false],           // left sleeve
+        [4, 36, 4, 12, 4, 20, false],              // right trouser leg
+        [4, 52, 4, 12, 8, 20, false]               // left trouser leg
+      );
+    }
+    over.forEach(p => blit(ctx, skin.canvas, p, scale));
+  }
+  return c;
+}
+
+function renderTexture(skin, scale) {
+  const { c, ctx } = newCanvas(skin.canvas.width * scale, skin.canvas.height * scale);
+  ctx.drawImage(skin.canvas, 0, 0, c.width, c.height);
+  return c;
+}
+
+
+/* ---------- Local 3D engine ---------- */
+
+// Orthographic projection: under rotation a box face stays a parallelogram,
+// which is exactly what ctx.setTransform() reproduces. No perspective, so no
+// quad ever needs splitting.
+
+const FACES = ['right', 'front', 'left', 'back', 'top', 'bottom'];
+// Fixed lighting, the way the game does it: shading follows the face's
+// orientation in the model, not the camera.
+const SHADE = { top: 1, bottom: 0.5, front: 0.8, back: 0.8, left: 0.62, right: 0.62 };
+const SHADE_LEVELS = [1, 0.8, 0.62, 0.5];
+const PITCH_LIMIT = 30;     // degrees
+const YAW_STEP = 15;        // step shared by the slider and the drag
+const PITCH_STEP = 5;
+const D2R = Math.PI / 180;
+const SEAM_PAD = 0.5;   // pixels of bleed, to hide seams between faces
+
+const V3 = (x, y, z) => ({ x, y, z });
+const vadd = (...list) => list.reduce((a, b) => V3(a.x + b.x, a.y + b.y, a.z + b.z), V3(0, 0, 0));
+const vsub = (a, b) => V3(a.x - b.x, a.y - b.y, a.z - b.z);
+const vcross = (a, b) => V3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+
+// Minecraft's box unwrap: given a texture corner (U,V) and the box size, the
+// six faces always land in this layout.
+function boxUV(U, V, w, h, d) {
+  return {
+    right:  [U, V + d, d, h],
+    front:  [U + d, V + d, w, h],
+    left:   [U + d + w, V + d, d, h],
+    back:   [U + d + w + d, V + d, w, h],
+    top:    [U + d, V, w, d],
+    bottom: [U + d + w, V, w, d]
+  };
+}
+
+// Six faces from one corner and three edge vectors. Tilting ey is enough to
+// make the cape hang, with no extra rotation machinery.
+function boxFaces(o, ex, ey, ez, uv, mirror) {
+  const corners = {
+    front:  [vadd(o, ey, ez), vadd(o, ex, ey, ez), vadd(o, ez)],
+    back:   [vadd(o, ex, ey), vadd(o, ey), vadd(o, ex)],
+    right:  [vadd(o, ey), vadd(o, ey, ez), o],
+    left:   [vadd(o, ex, ey, ez), vadd(o, ex, ey), vadd(o, ex, ez)],
+    top:    [vadd(o, ey), vadd(o, ex, ey), vadd(o, ey, ez)],
+    bottom: [vadd(o, ez), vadd(o, ex, ez), o]
+  };
+  return FACES.map((name) => {
+    const [c00, c10, c01] = corners[name];
+    // Normal comes from the raw geometry: mirroring swaps the texture, never
+    // the direction the face points in.
+    const normal = vcross(vsub(c01, c00), vsub(c10, c00));
+    let p00 = c00, p10 = c10, p01 = c01;
+    let key = name;
+    if (mirror) {
+      if (name === 'left') key = 'right';
+      else if (name === 'right') key = 'left';
+      const p11 = vadd(c10, vsub(c01, c00));
+      p00 = c10; p10 = c00; p01 = p11;
+    }
+    return { p00, p10, p01, normal, rect: uv[key], shade: SHADE[name] };
+  });
+}
+
+// The character is 32 units tall, 1 unit being 1 skin pixel.
+function buildBoxes(skin, parts, overlay) {
+  const aw = skin.slim ? 3 : 4;
+  const legacy = skin.legacy;
+  const list = [];
+  const add = (x, y, z, w, h, d, U, V, inflate, mirror) =>
+    list.push({ x, y, z, w, h, d, U, V, inflate, mirror: !!mirror });
+
+  add(-4, 24, -4, 8, 8, 8, 0, 0, 0);
+  if (overlay) add(-4, 24, -4, 8, 8, 8, 32, 0, 0.5);
+  if (parts === 'head') return list;
+
+  add(-4, 12, -2, 8, 12, 4, 16, 16, 0);
+  add(-4 - aw, 12, -2, aw, 12, 4, 40, 16, 0);
+  if (legacy) add(4, 12, -2, aw, 12, 4, 40, 16, 0, true);
+  else add(4, 12, -2, aw, 12, 4, 32, 48, 0);
+  if (overlay && !legacy) {
+    add(-4, 12, -2, 8, 12, 4, 16, 32, 0.25);
+    add(-4 - aw, 12, -2, aw, 12, 4, 40, 32, 0.25);
+    add(4, 12, -2, aw, 12, 4, 48, 48, 0.25);
+  }
+  if (parts === 'bust') return list;
+
+  add(-4, 0, -2, 4, 12, 4, 0, 16, 0);
+  if (legacy) add(0, 0, -2, 4, 12, 4, 0, 16, 0, true);
+  else add(0, 0, -2, 4, 12, 4, 16, 48, 0);
+  if (overlay && !legacy) {
+    add(-4, 0, -2, 4, 12, 4, 0, 32, 0.25);
+    add(0, 0, -2, 4, 12, 4, 0, 48, 0.25);
+  }
+  return list;
+}
+
+function boxToFaces(b, texKey) {
+  const i = b.inflate;
+  const o = V3(b.x - i, b.y - i, b.z - i);
+  const faces = boxFaces(
+    o,
+    V3(b.w + 2 * i, 0, 0), V3(0, b.h + 2 * i, 0), V3(0, 0, b.d + 2 * i),
+    boxUV(b.U, b.V, b.w, b.h, b.d),   // texture regions ignore the inflation
+    b.mirror
+  );
+  faces.forEach((f) => { f.tex = texKey; });
+  return faces;
+}
+
+// The cape hangs from the shoulders and leans away from the back. It is
+// turned 180 degrees (negative ex and ez) so its printed side faces backwards.
+function capeFaces() {
+  const tilt = 11 * Math.PI / 180;
+  const w = 10, h = 16, d = 1;
+  const ey = V3(0, h * Math.cos(tilt), h * Math.sin(tilt));
+  const o = V3(w / 2, 24 - ey.y, -2 - ey.z);
+  const faces = boxFaces(o, V3(-w, 0, 0), ey, V3(0, 0, -d), boxUV(0, 0, w, h, d), false);
+  faces.forEach((f) => { f.tex = 'cape'; });
+  return faces;
+}
+
+// One darkened copy per lighting level, which is simpler and more accurate
+// than blending a black layer over the finished render. The set depends only
+// on the texture, so it is built once per skin and per cape.
+const shadeCache = new WeakMap();
+
+function shadeSet(source) {
+  const cached = shadeCache.get(source);
+  if (cached) return cached;
+  const set = {};
+  for (const level of SHADE_LEVELS) {
+    if (level >= 1) { set[level] = source; continue; }
+    const { c, ctx } = newCanvas(source.width, source.height);
+    ctx.drawImage(source, 0, 0);
+    ctx.globalCompositeOperation = 'source-atop';   // only darkens opaque pixels
+    ctx.fillStyle = `rgba(0,0,0,${1 - level})`;
+    ctx.fillRect(0, 0, c.width, c.height);
+    set[level] = c;
+  }
+  shadeCache.set(source, set);
+  return set;
+}
+
+// Geometry and framing depend on the model's shape, never on the angles, so
+// they are computed once per combination instead of on every frame.
+const modelCache = new Map();
+
+function modelFor(skin, parts, overlay, cape) {
+  const key = `${parts}|${skin.slim}|${skin.legacy}|${!!overlay}|${!!cape}`;
+  const cached = modelCache.get(key);
+  if (cached) return cached;
+
+  const faces = [];
+  for (const box of buildBoxes(skin, parts, overlay)) faces.push(...boxToFaces(box, 'skin'));
+  if (cape && parts !== 'head') faces.push(...capeFaces());
+
+  const verts = [];
+  for (const f of faces) verts.push(f.p00, f.p10, f.p01, vadd(f.p10, vsub(f.p01, f.p00)));
+  const midY = (Math.min(...verts.map((v) => v.y)) + Math.max(...verts.map((v) => v.y))) / 2;
+
+  // Fixed framing: sweep the grid of angles the user can actually reach and
+  // keep the largest extent. The render never breathes while dragging, and we
+  // avoid the wasteful margin an analytic upper bound would force.
+  let halfW = 0, halfH = 0;
+  for (let yy = -180; yy < 180; yy += YAW_STEP) {
+    const cy = Math.cos(yy * D2R), sy = Math.sin(yy * D2R);
+    for (let pp = -PITCH_LIMIT; pp <= PITCH_LIMIT; pp += PITCH_STEP) {
+      const cp = Math.cos(pp * D2R), sp = Math.sin(pp * D2R);
+      for (const v of verts) {
+        const x = v.x * cy + v.z * sy;
+        const y = (v.y - midY) * cp - (-v.x * sy + v.z * cy) * sp;
+        if (Math.abs(x) > halfW) halfW = Math.abs(x);
+        if (Math.abs(y) > halfH) halfH = Math.abs(y);
+      }
+    }
+  }
+
+  const model = { faces, midY, unitsW: 2 * halfW, unitsH: 2 * halfH };
+  modelCache.set(key, model);
+  return model;
+}
+
+// A single reused output canvas, so dragging does not allocate a full-size
+// surface on every frame.
+let frameBuffer = null;
+
+function frameCanvas(w, h) {
+  if (!frameBuffer) {
+    frameBuffer = newCanvas(w, h);
+  } else if (frameBuffer.c.width !== w || frameBuffer.c.height !== h) {
+    frameBuffer.c.width = w;
+    frameBuffer.c.height = h;
+    frameBuffer.ctx.imageSmoothingEnabled = false;   // resizing resets it
+  } else {
+    frameBuffer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    frameBuffer.ctx.clearRect(0, 0, w, h);
+  }
+  return frameBuffer;
+}
+
+function render3D(skin, options) {
+  const parts = options.parts || 'full';
+  const { faces, midY, unitsW, unitsH } = modelFor(skin, parts, options.overlay, options.cape);
+  const scale = options.size / Math.max(unitsW, unitsH);
+  const W = Math.max(1, Math.round(unitsW * scale));
+  const H = Math.max(1, Math.round(unitsH * scale));
+
+  const { c, ctx } = frameCanvas(W, H);
+  const textures = { skin: shadeSet(skin.canvas) };
+  if (options.cape) textures.cape = shadeSet(options.cape);
+
+  const yaw = (options.yaw || 0) * Math.PI / 180;
+  const pitch = (options.pitch || 0) * Math.PI / 180;
+  const cosY = Math.cos(yaw), sinY = Math.sin(yaw);
+  const cosP = Math.cos(pitch), sinP = Math.sin(pitch);
+
+  const project = (p) => {
+    const x = p.x * cosY + p.z * sinY;
+    const z = -p.x * sinY + p.z * cosY;
+    const y = p.y - midY;
+    return {
+      sx: W / 2 + x * scale,
+      sy: H / 2 - (y * cosP - z * sinP) * scale,
+      depth: y * sinP + z * cosP
+    };
+  };
+  // Depth of a normal: positive means the face points at the camera.
+  const facing = (n) => n.y * sinP + (-n.x * sinY + n.z * cosY) * cosP;
+
+  const quads = [];
+  for (const f of faces) {
+    if (facing(f.normal) <= 0) continue;            // cull back faces
+    const a = project(f.p00), b = project(f.p10), d = project(f.p01);
+    // Depth is affine, so averaging the four corners collapses to (b + d) / 2,
+    // the fourth corner being b + d - a.
+    quads.push({ f, a, b, d, depth: (b.depth + d.depth) / 2 });
+  }
+  quads.sort((p, q) => p.depth - q.depth);
+
+  for (const q of quads) {
+    const [u, v, tw, th] = q.f.rect;
+    const ux = q.b.sx - q.a.sx, uy = q.b.sy - q.a.sy;
+    const vx = q.d.sx - q.a.sx, vy = q.d.sy - q.a.sy;
+    const lu = Math.hypot(ux, uy), lv = Math.hypot(vx, vy);
+    if (!lu || !lv) continue;
+    const eu = SEAM_PAD / lu, ev = SEAM_PAD / lv;
+    const x00 = q.a.sx - ux * eu - vx * ev, y00 = q.a.sy - uy * eu - vy * ev;
+    const x10 = q.b.sx + ux * eu - vx * ev, y10 = q.b.sy + uy * eu - vy * ev;
+    const x01 = q.d.sx - ux * eu + vx * ev, y01 = q.d.sy - uy * eu + vy * ev;
+    const a = (x10 - x00) / tw, b = (y10 - y00) / tw;
+    const cc = (x01 - x00) / th, d = (y01 - y00) / th;
+    ctx.setTransform(a, b, cc, d, x00 - a * u - cc * v, y00 - b * u - d * v);
+    ctx.drawImage(textures[q.f.tex][q.f.shade], u, v, tw, th, u, v, tw, th);
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  return c;
+}
+
+// Mojang capes are 64x32, OptiFine ones 46x22 (the spare room on the right
+// holds the elytra). Both formats put the cape at the same coordinates, only
+// the canvas scale differs.
+async function loadCape(blob) {
+  const bitmap = await createImageBitmap(blob);
+  const optifine = bitmap.width * 22 === bitmap.height * 46;
+  const unit = optifine ? bitmap.width / 46 : bitmap.width / 64;
+  if (!(unit > 0)) { bitmap.close && bitmap.close(); throw new Error(t('errCapeRead')); }
+  const { c, ctx } = newCanvas(Math.round(bitmap.width / unit), Math.round(bitmap.height / unit));
+  ctx.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height, 0, 0, c.width, c.height);
+  bitmap.close && bitmap.close();
+  return c;
+}
+
+
+/* ---------- Translation ---------- */
+
+// The Figma API exposes no editor language (there is no figma.language, and
+// nothing on currentUser). We fall back on the system locale, which the iframe
+// can read, and let the user override it when the two disagree.
+const STRINGS = {
+  en: {
+    tabName: 'Username / UUID', tabFile: 'Skin file', tabRecent: 'Recent',
+    player: 'Player', playerPlaceholder: 'Leave empty for Steve',
+    playerHint: 'Leave empty to preview the default Steve skin.',
+    errSteve: 'Default skin unavailable, check your connection',
+    skinTexture: 'Skin texture',
+    dropTitle: 'Drop a 64\u00d764 PNG',
+    dropSub: 'or click to pick a file (legacy 64\u00d732 accepted)',
+    clickReplace: 'Click to replace',
+    recentTitle: 'Last 10 imports', clear: 'Clear', recentEmpty: 'No imports yet.',
+    renderType: 'Render type', size: 'Size', cape: 'Cape',
+    rotation: 'Rotation', tilt: 'Tilt',
+    overlay: 'Include the outer layer (hat, jacket)',
+    nametagAdd: 'Add a nametag above', nametagPlaceholder: 'Player name',
+    text: 'Text', textSize: 'Text size', bgOpacity: 'Background opacity',
+    textColor: 'Text color', bgColor: 'Background color',
+    nametagHint: 'The nametag and the image share one frame, as two separate editable layers. Pick the typeface afterwards in Figma, on the text layer.',
+    dragHint: 'Drag to rotate',
+    importBtn: 'Import into Figma', importing: 'Importing\u2026',
+    language: 'Language', langAuto: 'Automatic',
+    credits: 'Skins: mc-heads.net, minotar.net \u00b7 Capes: capes.dev',
+    typeFull: '3D body', typeFullSub: 'NameMC style',
+    typeBust: '3D bust', typeBustSub: 'Upper body',
+    typeHead: '3D head', typeHeadSub: 'Isometric cube',
+    typeFace: '2D face', typeFaceSub: 'Pixel perfect',
+    typeFront: '2D body', typeFrontSub: 'Front view',
+    typeSkin: 'Texture', typeSkinSub: 'Raw file',
+    capeNone: 'None', capeMojang: "Player's cape (Mojang)", capeOptifine: "Player's OptiFine cape",
+    noteCapeNeedsPlayer: 'Player capes require a username.',
+    errPlayer: 'Player not found or service unavailable',
+    errNoSkin: 'No skin texture',
+    errCapeNet: 'Cape service unreachable', errCapeSvc: 'Cape service unavailable',
+    errNoOptifine: 'No OptiFine cape for this player', errNoMojang: 'No Mojang cape for this player',
+    errCapeImg: 'Cape image unavailable', errCapeRead: 'Unreadable cape',
+    errSkinSize: 'The skin must be 64\u00d764 (or 64\u00d732)', errImageRead: 'Unreadable image file'
+  },
+  fr: {
+    tabName: 'Pseudo / UUID', tabFile: 'Fichier skin', tabRecent: 'R\u00e9cents',
+    player: 'Joueur', playerPlaceholder: 'Laisser vide pour Steve',
+    playerHint: 'Vide : aper\u00e7u avec le skin Steve par d\u00e9faut.',
+    errSteve: 'Skin par d\u00e9faut indisponible, v\u00e9rifiez votre connexion',
+    skinTexture: 'Texture de skin',
+    dropTitle: 'D\u00e9poser un PNG 64\u00d764',
+    dropSub: 'ou cliquer pour choisir un fichier (64\u00d732 h\u00e9rit\u00e9 accept\u00e9)',
+    clickReplace: 'Cliquer pour remplacer',
+    recentTitle: '10 derniers imports', clear: 'Vider', recentEmpty: "Aucun import pour l'instant.",
+    renderType: 'Type de rendu', size: 'Taille', cape: 'Cape',
+    rotation: 'Rotation', tilt: 'Inclinaison',
+    overlay: 'Inclure le calque ext\u00e9rieur (chapeau, veste)',
+    nametagAdd: 'Ajouter un nametag au-dessus', nametagPlaceholder: 'Pseudo du joueur',
+    text: 'Texte', textSize: 'Taille du texte', bgOpacity: 'Opacit\u00e9 du fond',
+    textColor: 'Couleur du texte', bgColor: 'Couleur du fond',
+    nametagHint: "Le nametag et l'image sont r\u00e9unis dans un m\u00eame cadre, en deux calques distincts et modifiables. La typo se choisit ensuite dans Figma, sur le calque texte.",
+    dragHint: 'Glissez pour tourner',
+    importBtn: 'Importer dans Figma', importing: 'Import\u2026',
+    language: 'Langue', langAuto: 'Automatique',
+    credits: 'Skins : mc-heads.net, minotar.net \u00b7 Capes : capes.dev',
+    typeFull: 'Corps 3D', typeFullSub: 'Style NameMC',
+    typeBust: 'Buste 3D', typeBustSub: 'Haut du corps',
+    typeHead: 'T\u00eate 3D', typeHeadSub: 'Cube isom\u00e9trique',
+    typeFace: 'Visage 2D', typeFaceSub: 'Pixel perfect',
+    typeFront: 'Corps 2D', typeFrontSub: 'Vue de face',
+    typeSkin: 'Texture', typeSkinSub: 'Fichier brut',
+    capeNone: 'Aucune', capeMojang: 'Cape du joueur (Mojang)', capeOptifine: 'Cape OptiFine du joueur',
+    noteCapeNeedsPlayer: 'Les capes de joueur demandent un pseudo.',
+    errPlayer: 'Joueur introuvable ou service indisponible',
+    errNoSkin: 'Aucune texture de skin',
+    errCapeNet: 'Service de capes injoignable', errCapeSvc: 'Service de capes indisponible',
+    errNoOptifine: 'Pas de cape OptiFine pour ce joueur', errNoMojang: 'Pas de cape Mojang pour ce joueur',
+    errCapeImg: 'Image de cape indisponible', errCapeRead: 'Cape illisible',
+    errSkinSize: 'Le skin doit faire 64\u00d764 (ou 64\u00d732)', errImageRead: 'Fichier image illisible'
+  }
+};
+
+let lang = 'auto';
+let locale = 'en';
+
+function pickLocale(tag) {
+  const base = String(tag || 'en').toLowerCase().split('-')[0];
+  return STRINGS[base] ? base : 'en';
+}
+
+function t(key) {
+  return (STRINGS[locale] && STRINGS[locale][key]) || STRINGS.en[key] || key;
+}
+
+/* ---------- Application ---------- */
+
+const TYPES = [
+  { id: 'full',  key: 'typeFull',  sub: 'typeFullSub',  kind: '3d', parts: 'full' },
+  { id: 'bust',  key: 'typeBust',  sub: 'typeBustSub',  kind: '3d', parts: 'bust' },
+  { id: 'head',  key: 'typeHead',  sub: 'typeHeadSub',  kind: '3d', parts: 'head' },
+  { id: 'face',  key: 'typeFace',  sub: 'typeFaceSub',  kind: '2d', natural: 8 },
+  { id: 'front', key: 'typeFront', sub: 'typeFrontSub', kind: '2d', natural: 16 },
+  { id: 'skin',  key: 'typeSkin',  sub: 'typeSkinSub',  kind: '2d', natural: 64 }
+];
+const BY_ID = Object.fromEntries(TYPES.map((t) => [t.id, t]));
+const CAPE_SOURCES = [
+  { id: '', key: 'capeNone' },
+  { id: 'mojang', key: 'capeMojang', player: true },
+  { id: 'optifine', key: 'capeOptifine', player: true }
+].concat(MINECON_CAPES.map((c) => ({ id: c.id, label: c.label })));
+
+const ICONS = {
+  full:  '<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="7" y="2" width="8" height="6" rx="1" fill="currentColor" opacity=".9"/><rect x="8" y="9" width="6" height="7" fill="currentColor" opacity=".6"/><rect x="4" y="9" width="3" height="7" fill="currentColor" opacity=".45"/><rect x="15" y="9" width="3" height="7" fill="currentColor" opacity=".45"/><rect x="8" y="17" width="2.5" height="4" fill="currentColor" opacity=".6"/><rect x="11.5" y="17" width="2.5" height="4" fill="currentColor" opacity=".6"/></svg>',
+  bust:  '<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="7" y="3" width="8" height="7" rx="1" fill="currentColor" opacity=".9"/><rect x="5" y="12" width="12" height="7" rx="1" fill="currentColor" opacity=".5"/></svg>',
+  head:  '<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M11 2l8 4.5v9L11 20l-8-4.5v-9L11 2z" fill="currentColor" opacity=".55"/><path d="M11 2l8 4.5L11 11 3 6.5 11 2z" fill="currentColor" opacity=".9"/></svg>',
+  face:  '<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="3" y="3" width="16" height="16" rx="1.5" fill="currentColor" opacity=".45"/><rect x="6.5" y="9" width="3" height="3" fill="currentColor"/><rect x="12.5" y="9" width="3" height="3" fill="currentColor"/></svg>',
+  front: '<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="7" y="2" width="8" height="7" fill="currentColor" opacity=".85"/><rect x="7" y="10" width="8" height="7" fill="currentColor" opacity=".5"/><rect x="3" y="10" width="3" height="7" fill="currentColor" opacity=".5"/><rect x="16" y="10" width="3" height="7" fill="currentColor" opacity=".5"/><rect x="7" y="18" width="3.5" height="3" fill="currentColor" opacity=".7"/><rect x="11.5" y="18" width="3.5" height="3" fill="currentColor" opacity=".7"/></svg>',
+  skin:  '<svg width="22" height="22" viewBox="0 0 22 22" fill="none"><rect x="2.5" y="2.5" width="17" height="17" rx="1.5" stroke="currentColor" stroke-width="1.4" opacity=".6"/><rect x="5" y="5" width="5" height="5" fill="currentColor" opacity=".8"/><rect x="12" y="5" width="5" height="3" fill="currentColor" opacity=".5"/><rect x="5" y="12" width="12" height="5" fill="currentColor" opacity=".4"/></svg>'
+};
+
+const PX_PER_YAW_STEP = 12;
+const PX_PER_PITCH_STEP = 10;
+
+const state = {
+  tab: 'name', source: 'name', type: 'full', size: 512,
+  yaw: -30, pitch: 10, overlay: true, cape: '',
+  nametag: false,
+  fileBlob: null, fileName: ''
+};
+
+const el = (id) => document.getElementById(id);
+const enc = encodeURIComponent;
+const esc = (value) => String(value).replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+const skinCache = new Map();
+const capeCache = new Map();
+let recents = [];
+let lastRender = null;      // last rendered canvas, reused on import
+let renderToken = 0;
+
+/* ---------- Network: only ever to resolve a username ---------- */
+
+function skinUrls(id) {
+  return [
+    `https://mc-heads.net/skin/${enc(id)}`,
+    `https://minotar.net/skin/${enc(id)}`
+  ];
+}
+
+// Figma only accepts PNG and JPEG, so reject the error pages some services
+// hand back with a 200 status.
+async function isUsableImage(blob) {
+  const head = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
+  const png = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+  if (png.every((b, i) => head[i] === b)) return true;
+  return head[0] === 0xff && head[1] === 0xd8;
+}
+
+async function fetchFirst(urls, message) {
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache: 'no-cache', headers: { Accept: 'image/png' } });
+      if (!res.ok) continue;
+      const blob = await res.blob();
+      if (blob.size > 200 && await isUsableImage(blob)) return blob;
+    } catch (e) { /* try the next source */ }
+  }
+  throw new Error(message);
+}
+
+function dataURLToBlob(dataURL) {
+  const binary = atob(dataURL.split(',')[1]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], { type: 'image/png' });
+}
+
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Lecture impossible'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+// With no username and no file, fall back to the default Steve texture so the
+// panel always has something to show.
+async function skinFor(id) {
+  const key = state.source === 'file' ? 'file:' + state.fileName : 'name:' + String(id).toLowerCase();
+  if (state.source !== 'file' && !id) {
+    if (!skinCache.has('steve')) {
+      const promise = fetchFirst([STEVE_TEXTURE, STEVE_FALLBACK], t('errSteve')).then(loadSkin);
+      skinCache.set('steve', promise);
+      promise.catch(() => skinCache.delete('steve'));
+    }
+    return skinCache.get('steve');
+  }
+  if (state.source === 'file') {
+    if (!state.fileBlob) throw new Error(t('errNoSkin'));
+    if (!skinCache.has(key)) skinCache.set(key, loadSkin(state.fileBlob));
+    return skinCache.get(key);
+  }
+  if (!skinCache.has(key)) {
+    const promise = fetchFirst(skinUrls(id), t('errPlayer')).then(loadSkin);
+    skinCache.set(key, promise);
+    promise.catch(() => skinCache.delete(key));
+  }
+  return skinCache.get(key);
+}
+
+// Raw network errors ("Failed to fetch") end up in front of the user, so turn
+// them into something actionable.
+async function getJSON(url) {
+  let res;
+  try {
+    res = await fetch(url, { cache: 'no-cache' });
+  } catch (error) {
+    throw new Error(t('errCapeNet'));
+  }
+  if (!res.ok) throw new Error(t('errCapeSvc'));
+  return res.json();
+}
+
+async function fetchPlayerCape(id, kind) {
+  const info = await getJSON(`https://api.capes.dev/load/${enc(id)}/${kind}`);
+  if (!info.exists || !info.imageUrl) {
+    throw new Error(kind === 'optifine' ? t('errNoOptifine') : t('errNoMojang'));
+  }
+  let image;
+  try {
+    image = await fetch(info.imageUrl, { cache: 'no-cache' });
+  } catch (error) {
+    throw new Error(t('errCapeNet'));
+  }
+  if (!image.ok) throw new Error(t('errCapeImg'));
+  const blob = await image.blob();
+  if (!await isUsableImage(blob)) throw new Error(t('errCapeImg'));
+  return loadCape(blob);
+}
+
+// Returns { cape, note }: a failed cape never blocks the skin from rendering.
+async function capeFor(id) {
+  const choice = state.cape;
+  if (!choice) return { cape: null, note: '' };
+
+  const preset = MINECON_CAPES.find((c) => c.id === choice);
+  if (preset) {
+    if (!capeCache.has(choice)) {
+      const promise = fetchFirst([TEXTURE_CDN + preset.hash], t('errCapeImg')).then(loadCape);
+      capeCache.set(choice, promise);
+      promise.catch(() => capeCache.delete(choice));
+    }
+    try {
+      return { cape: await capeCache.get(choice), note: '' };
+    } catch (error) {
+      return { cape: null, note: error.message };
+    }
+  }
+
+  if (state.source === 'file' || !id) {
+    return { cape: null, note: t('noteCapeNeedsPlayer') };
+  }
+  const key = `${choice}:${id.toLowerCase()}`;
+  if (!capeCache.has(key)) {
+    const promise = fetchPlayerCape(id, choice === 'mojang' ? 'minecraft' : 'optifine');
+    capeCache.set(key, promise);
+    promise.catch(() => capeCache.delete(key));
+  }
+  try {
+    return { cape: await capeCache.get(key), note: '' };
+  } catch (error) {
+    return { cape: null, note: error.message };
+  }
+}
+
+/* ---------- Rendering ---------- */
+
+function playerId() {
+  return el('player').value.trim();
+}
+
+function subjectId() {
+  return state.source === 'file' ? state.fileName : playerId();
+}
+
+function subjectLabel() {
+  return state.source === 'file' ? (state.fileName || 'skin') : (playerId() || 'Steve');
+}
+
+// Returns a canvas. Everything is computed locally, with no render service.
+async function generate(id) {
+  const type = BY_ID[state.type];
+  const skin = await skinFor(id);
+  const overlay = state.overlay && skin.overlayUsable;
+
+  if (type.kind === '3d') {
+    const { cape, note } = type.parts === 'head' ? { cape: null, note: '' } : await capeFor(id);
+    return {
+      canvas: render3D(skin, {
+        parts: type.parts, overlay, cape,
+        size: state.size, yaw: state.yaw, pitch: state.pitch
+      }),
+      note
+    };
+  }
+
+  const scale = Math.max(1, Math.round(state.size / type.natural));
+  let canvas;
+  if (state.type === 'face') canvas = renderFace(skin, scale, overlay);
+  else if (state.type === 'front') canvas = renderFront(skin, scale, overlay);
+  else canvas = renderTexture(skin, scale);
+  return { canvas, note: '' };
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+}
+
+/* ---------- Nametag ---------- */
+
+function nametagConfig(id) {
+  if (!state.nametag) return null;
+  const typed = el('nametag-text').value.trim();
+  return {
+    text: typed || id || 'Steve',
+    fontSize: clamp(Math.round(Number(el('nametag-size').value) || 32), 4, 400),
+    textColor: el('nametag-fg').value,
+    bgColor: el('nametag-bg').value,
+    bgOpacity: clamp(Number(el('nametag-opacity').value) / 100, 0, 1)
+  };
+}
+
+function hexToRgba(hex, alpha) {
+  const v = parseInt(hex.slice(1), 16);
+  return `rgba(${(v >> 16) & 255}, ${(v >> 8) & 255}, ${v & 255}, ${alpha})`;
+}
+
+// The nametag preview is an HTML element sitting above the image, never drawn
+// into it, because it reaches Figma as its own frame.
+function syncNametagPreview(renderedHeight) {
+  const node = el('nametag-preview');
+  const config = nametagConfig(subjectLabel());
+  if (!config) { node.classList.add('hidden'); return; }
+  const shown = el('preview-canvas').getBoundingClientRect().height;
+  const ratio = shown && renderedHeight ? shown / renderedHeight : 0.25;
+  const size = clamp(Math.round(config.fontSize * ratio), 8, 22);
+  node.textContent = config.text;
+  node.style.fontSize = size + 'px';
+  node.style.color = config.textColor;
+  node.style.background = hexToRgba(config.bgColor, config.bgOpacity);
+  node.style.padding = `${Math.max(1, Math.round(size * 0.25))}px ${Math.max(2, Math.round(size * 0.5))}px`;
+  node.classList.remove('hidden');
+}
+
+/* ---------- Preview ---------- */
+
+function showMessage(text, isError) {
+  el('stage').classList.add('hidden');
+  el('preview-size').classList.add('hidden');
+  el('preview-hint').classList.add('hidden');
+  const msg = el('preview-msg');
+  msg.textContent = text;
+  msg.className = 'msg' + (isError ? ' err' : '');
+}
+
+function showRender(canvas) {
+  const view = el('preview-canvas');
+  view.width = canvas.width;
+  view.height = canvas.height;
+  const ctx = view.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(canvas, 0, 0);
+  view.classList.remove('hidden');
+  el('stage').classList.remove('hidden');
+  el('preview-msg').classList.add('hidden');
+  el('preview-size').textContent = `${canvas.width} × ${canvas.height}`;
+  el('preview-size').classList.remove('hidden');
+  el('preview-hint').classList.toggle('hidden', BY_ID[state.type].kind !== '3d');
+  el('preview').classList.toggle('rotatable', BY_ID[state.type].kind === '3d');
+  syncNametagPreview(canvas.height);
+}
+
+let debounceTimer;
+function refreshPreview(delay = 0) {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(doPreview, delay);
+}
+
+async function doPreview() {
+  const token = ++renderToken;
+  try {
+    const { canvas, note } = await generate(subjectId());
+    if (token !== renderToken) return;
+    lastRender = canvas;
+    showRender(canvas);
+    el('cape-note').textContent = note;
+    el('cape-note').classList.toggle('hidden', !note);
+  } catch (error) {
+    if (token !== renderToken) return;
+    lastRender = null;
+    showMessage(error.message, true);
+  }
+}
+
+/* ---------- Rotation: sliders and dragging on the preview ---------- */
+
+function setYaw(value) {
+  state.yaw = value;
+  el('yaw').value = String(value);
+  el('yaw-val').textContent = value + '°';
+}
+
+function setPitch(value) {
+  state.pitch = value;
+  el('pitch').value = String(value);
+  el('pitch-val').textContent = value + '°';
+}
+
+// Wrap the angle into [-180, 180) so dragging can spin forever while staying
+// on the slider's range.
+function wrapYaw(value) {
+  return ((value + 180) % 360 + 360) % 360 - 180;
+}
+
+// pointermove can fire more often than the display refreshes, so render at
+// most once per animation frame.
+let framePending = false;
+
+function requestRender() {
+  if (framePending) return;
+  framePending = true;
+  requestAnimationFrame(() => {
+    framePending = false;
+    doPreview();
+  });
+}
+
+let drag = null;
+const preview = el('preview');
+
+preview.addEventListener('pointerdown', (event) => {
+  if (BY_ID[state.type].kind !== '3d' || !lastRender) return;
+  drag = { x: event.clientX, y: event.clientY, yaw: state.yaw, pitch: state.pitch };
+  clearTimeout(debounceTimer);
+  try { preview.setPointerCapture(event.pointerId); } catch (e) { /* synthetic pointer */ }
+  preview.classList.add('dragging');
+});
+
+preview.addEventListener('pointermove', (event) => {
+  if (!drag) return;
+  const yaw = wrapYaw(drag.yaw + Math.round((event.clientX - drag.x) / PX_PER_YAW_STEP) * YAW_STEP);
+  const pitch = clamp(drag.pitch + Math.round((event.clientY - drag.y) / PX_PER_PITCH_STEP) * PITCH_STEP,
+    -PITCH_LIMIT, PITCH_LIMIT);
+  if (yaw === state.yaw && pitch === state.pitch) return;
+  setYaw(yaw);
+  setPitch(pitch);
+  requestRender();
+});
+
+function endDrag(event) {
+  if (!drag) return;
+  drag = null;
+  preview.classList.remove('dragging');
+  try {
+    if (preview.hasPointerCapture(event.pointerId)) preview.releasePointerCapture(event.pointerId);
+  } catch (e) { /* nothing to release */ }
+}
+preview.addEventListener('pointerup', endDrag);
+preview.addEventListener('pointercancel', endDrag);
+
+/* ---------- Recent imports ---------- */
+
+function makeThumb(canvas) {
+  const ratio = Math.min(72 / canvas.width, 72 / canvas.height, 1);
+  const { c, ctx } = newCanvas(
+    Math.max(1, Math.round(canvas.width * ratio)),
+    Math.max(1, Math.round(canvas.height * ratio))
+  );
+  ctx.imageSmoothingEnabled = true;   // smooth downscale reads better as a thumbnail
+  ctx.drawImage(canvas, 0, 0, c.width, c.height);
+  return c.toDataURL('image/png');
+}
+
+function renderDrop() {
+  el('drop').innerHTML = state.fileName
+    ? `<strong>${esc(state.fileName)}</strong><span>${esc(t('clickReplace'))}</span>`
+    : `<strong>${esc(t('dropTitle'))}</strong><span>${esc(t('dropSub'))}</span>`;
+}
+
+function renderRecents() {
+  const list = el('recents');
+  el('clear-recents').classList.toggle('hidden', recents.length === 0);
+  el('recents-empty').classList.toggle('hidden', recents.length > 0);
+  list.innerHTML = recents.map((entry, index) => `
+    <button class="recent" data-index="${index}" title="${esc(entry.id)}">
+      <span class="thumb">${entry.thumb ? `<img src="${esc(entry.thumb)}" alt="" />` : ''}</span>
+      <span class="meta">
+        <span class="n">${esc(entry.id)}</span>
+        <span class="d">${esc(BY_ID[entry.type] ? t(BY_ID[entry.type].key) : entry.type)} · ${entry.size} px</span>
+      </span>
+    </button>`).join('');
+  list.querySelectorAll('.recent').forEach((button) => {
+    button.onclick = () => restoreRecent(recents[Number(button.dataset.index)]);
+  });
+}
+
+function restoreRecent(entry) {
+  if (!entry) return;
+  state.type = BY_ID[entry.type] ? entry.type : 'full';
+  state.size = entry.size;
+  state.overlay = entry.overlay;
+  state.cape = entry.cape || '';
+  setYaw(entry.yaw || 0);
+  setPitch(entry.pitch || 0);
+  el('overlay').checked = entry.overlay;
+
+  state.nametag = !!entry.nametag;
+  el('nametag').checked = state.nametag;
+  if (entry.nametag) {
+    el('nametag-text').value = entry.nametag.text || '';
+    el('nametag-size').value = String(entry.nametag.fontSize);
+    el('nametag-fg').value = entry.nametag.textColor;
+    el('nametag-bg').value = entry.nametag.bgColor;
+    el('nametag-opacity').value = String(Math.round(entry.nametag.bgOpacity * 100));
+  }
+
+  if (entry.source === 'file' && entry.skin) {
+    state.fileBlob = dataURLToBlob(entry.skin);
+    state.fileName = entry.id;
+    skinCache.delete('file:' + entry.id);
+    renderDrop();
+    setTab('file');
+  } else {
+    el('player').value = entry.id === 'Steve' ? '' : entry.id;
+    setTab('name');
+  }
+}
+
+/* ---------- Tabs and controls ---------- */
+
+function applyLocale() {
+  document.documentElement.lang = locale;
+  document.querySelectorAll('[data-i18n]').forEach((node) => {
+    node.textContent = t(node.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((node) => {
+    node.placeholder = t(node.dataset.i18nPlaceholder);
+  });
+  renderDrop();
+  renderTypeCards();
+  capeOptions();
+  renderRecents();
+  syncNametagPreview(lastRender ? lastRender.height : 0);
+}
+
+function setTab(tab) {
+  state.tab = tab;
+  if (tab !== 'recent') state.source = tab;
+  for (const name of ['name', 'file', 'recent']) {
+    el('tab-' + name).setAttribute('aria-selected', String(tab === name));
+    el('pane-' + name).classList.toggle('hidden', tab !== name);
+  }
+  el('pane-config').classList.toggle('hidden', tab === 'recent');
+  el('footer').classList.toggle('hidden', tab === 'recent');
+  renderTypeCards();
+  syncOptions();
+  sizeOptions();
+  capeOptions();
+  if (tab !== 'recent') refreshPreview();
+}
+
+function sizeOptions() {
+  const type = BY_ID[state.type];
+  const values = type.kind === '3d' ? [128, 256, 512, 1024] : [64, 128, 256, 512, 1024];
+  if (!values.includes(state.size)) state.size = 512;
+  el('size').innerHTML = values.map((v) => `<option value="${v}">${v} px</option>`).join('');
+  el('size').value = String(state.size);
+}
+
+function capeOptions() {
+  const playerAvailable = state.source === 'name';
+  el('cape').innerHTML = CAPE_SOURCES.map((c) => `
+    <option value="${c.id}"${c.player && !playerAvailable ? ' disabled' : ''}>${esc(c.key ? t(c.key) : c.label)}</option>`).join('');
+  const current = CAPE_SOURCES.find((c) => c.id === state.cape);
+  if (current && current.player && !playerAvailable) state.cape = '';
+  el('cape').value = state.cape;
+}
+
+function renderTypeCards() {
+  el('types').innerHTML = TYPES.map((type) => `
+    <button class="card" data-type="${type.id}" aria-pressed="${state.type === type.id}">
+      ${ICONS[type.id]}
+      <span><span class="t">${esc(t(type.key))}</span><span class="s">${esc(t(type.sub))}</span></span>
+    </button>`).join('');
+  el('types').querySelectorAll('.card').forEach((button) => {
+    button.onclick = () => {
+      state.type = button.dataset.type;
+      syncOptions();
+      renderTypeCards();
+      sizeOptions();
+      refreshPreview();
+    };
+  });
+}
+
+function syncOptions() {
+  const type = BY_ID[state.type];
+  const is3d = type.kind === '3d';
+  el('opt-yaw').classList.toggle('hidden', !is3d);
+  el('opt-cape').classList.toggle('hidden', !(is3d && type.parts !== 'head'));
+  el('opt-overlay').classList.toggle('hidden', state.type === 'skin');
+  el('nametag-opts').classList.toggle('hidden', !state.nametag);
+}
+
+el('tab-name').onclick = () => setTab('name');
+el('tab-file').onclick = () => setTab('file');
+el('tab-recent').onclick = () => setTab('recent');
+
+el('player').oninput = () => refreshPreview(500);
+el('size').onchange = (e) => { state.size = Number(e.target.value); refreshPreview(); };
+el('cape').onchange = (e) => { state.cape = e.target.value; refreshPreview(); };
+el('overlay').onchange = (e) => { state.overlay = e.target.checked; refreshPreview(); };
+el('yaw').oninput = (e) => { setYaw(Number(e.target.value)); refreshPreview(); };
+el('pitch').oninput = (e) => { setPitch(Number(e.target.value)); refreshPreview(); };
+
+el('nametag').onchange = (e) => {
+  state.nametag = e.target.checked;
+  syncOptions();
+  syncNametagPreview(lastRender ? lastRender.height : 0);
+};
+['nametag-text', 'nametag-size', 'nametag-fg', 'nametag-bg', 'nametag-opacity'].forEach((id) => {
+  el(id).oninput = () => syncNametagPreview(lastRender ? lastRender.height : 0);
+});
+
+el('lang').onchange = (e) => {
+  lang = e.target.value;
+  locale = lang === 'auto' ? pickLocale(navigator.language) : pickLocale(lang);
+  applyLocale();
+  parent.postMessage({ pluginMessage: { type: 'set-lang', lang, locale } }, '*');
+};
+
+el('clear-recents').onclick = () => parent.postMessage({ pluginMessage: { type: 'clear-recents' } }, '*');
+
+el('drop').onclick = () => el('file').click();
+el('file').onchange = (e) => { if (e.target.files[0]) acceptFile(e.target.files[0]); };
+['dragenter', 'dragover'].forEach((name) => el('drop').addEventListener(name, (e) => {
+  e.preventDefault(); el('drop').classList.add('over');
+}));
+['dragleave', 'drop'].forEach((name) => el('drop').addEventListener(name, (e) => {
+  e.preventDefault(); el('drop').classList.remove('over');
+}));
+el('drop').addEventListener('drop', (e) => {
+  if (e.dataTransfer.files[0]) acceptFile(e.dataTransfer.files[0]);
+});
+
+async function acceptFile(file) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const ok = bitmap.width === 64 && (bitmap.height === 64 || bitmap.height === 32);
+    bitmap.close && bitmap.close();
+    if (!ok) { showMessage(t('errSkinSize'), true); return; }
+  } catch (e) {
+    showMessage(t('errImageRead'), true);
+    return;
+  }
+  state.fileBlob = file;
+  state.fileName = file.name.replace(/\.png$/i, '');
+  skinCache.delete('file:' + state.fileName);
+  renderDrop();
+  refreshPreview();
+}
+
+/* ---------- Import ---------- */
+
+el('import').onclick = async () => {
+  const button = el('import');
+  button.disabled = true;
+  button.textContent = t('importing');
+
+  try {
+    const label = subjectLabel();
+    const canvas = lastRender || (await generate(subjectId())).canvas;
+    const blob = await canvasToBlob(canvas);
+    const nametag = nametagConfig(label);
+    parent.postMessage({ pluginMessage: {
+      type: 'import',
+      item: {
+        name: `${label} \u00b7 ${t(BY_ID[state.type].key)}`,
+        bytes: new Uint8Array(await blob.arrayBuffer()),
+        nametag
+      },
+      entry: {
+        key: `${state.source}|${label.toLowerCase()}|${state.type}`,
+        source: state.source, id: label, type: state.type, size: state.size,
+        yaw: state.yaw, pitch: state.pitch, overlay: state.overlay, cape: state.cape,
+        nametag, thumb: makeThumb(canvas),
+        skin: state.source === 'file' ? await blobToDataURL(state.fileBlob) : null
+      }
+    } }, '*');
+  } catch (error) {
+    parent.postMessage({ pluginMessage: { type: 'notify', message: error.message, error: true } }, '*');
+    button.disabled = false;
+    button.textContent = t('importBtn');
+  }
+};
+
+onmessage = (event) => {
+  const msg = event.data.pluginMessage;
+  if (!msg) return;
+  if (msg.type === 'boot') {
+    lang = msg.lang || 'auto';
+    el('lang').value = lang;
+    const next = lang === 'auto' ? pickLocale(navigator.language) : pickLocale(lang);
+    if (next !== locale) { locale = next; applyLocale(); }
+    return;
+  }
+  if (msg.type === 'import-done') {
+    el('import').disabled = false;
+    el('import').textContent = t('importBtn');
+  }
+  if (msg.type === 'recents') {
+    recents = Array.isArray(msg.items) ? msg.items : [];
+    renderRecents();
+  }
+};
+
+locale = pickLocale(navigator.language);
+setYaw(state.yaw);
+setPitch(state.pitch);
+setTab('name');
+applyLocale();
+parent.postMessage({ pluginMessage: { type: 'boot', locale } }, '*');
+el('player').focus();
+
+</script>
+</body>
+</html>

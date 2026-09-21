@@ -1,0 +1,18 @@
+{
+  "name": "Minecraft Skins",
+  "id": "minecraft-skins.figma.plugin",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma", "figjam", "slides"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": [
+      "https://textures.minecraft.net",
+      "https://mc-heads.net",
+      "https://minotar.net",
+      "https://api.capes.dev"
+    ],
+    "reasoning": "Fetches skin and cape textures for the username you type. Nothing else is sent, and all rendering happens locally inside the plugin."
+  }
+}
